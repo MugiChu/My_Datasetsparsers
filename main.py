@@ -1,7 +1,7 @@
 import logging
 import collections
 import requests
-import bs4
+from bs4 import BeautifulSoup
 import csv
 
 logging.basicConfig(level=logging.INFO)
@@ -39,19 +39,34 @@ class Client:
 
     def load_page(self):
         url = 'https://stroypark.su/catalog/sad-i-ogorod/setki-sadovyie-ukryivnoy-material/setki'
+        url_text = open('urls.txt', 'w')
+        url_text.write(url)
+        url_text.close()
         res = self.session.get(url=url)
         res.raise_for_status()
         return res.text
 
     def parse_page(self, text: str):
-        soup = bs4.BeautifulSoup(text, 'lxml')
+        soup = BeautifulSoup(text, 'lxml')
         container = soup.select('div.c-good-item-content')
-        for block in container:
-            self.parse_block(block=block)
+        for block1 in container:
+            self.parse_block(block1=block1)
 
-    def parse_block(self, block):
+    def parse_block(self, block1):
 
-        url_block = block.select_one('div.c-good-item-code')
+        storage_number = 0
+        url = open('urls.txt', 'r')
+        link = url.read()
+        responce = requests.get(f'{link}?page={storage_number}').text
+        soup = BeautifulSoup(responce, 'lxml')
+        title = soup.find('section', class_='c-breadcrumb')
+        title_name = title.find_all('div', class_='c-layout')
+
+        for name in title_name:
+            name = name.text
+            name = name.replace('<a href="/">  ', '</a>').strip()
+
+        url_block = block1.select_one('div.c-good-item-code')
         if not url_block:
             logger.error('no url_block')
             return
@@ -61,7 +76,7 @@ class Client:
             logger.error('no href')
             return
 
-        name_block = block.select_one('div.c-good-item-title')
+        name_block = block1.select_one('div.c-good-item-title')
         if not name_block:
             logger.error(f'no name_block on {url}')
 
@@ -75,7 +90,7 @@ class Client:
         brand_name = brand_name.text
         brand_name = brand_name.replace('<a href="/good/12922501">', '</a>').strip()
 
-        cena_block = block.select_one('div.c-good-item-prices')
+        cena_block = block1.select_one('div.c-good-item-prices')
         if not cena_block:
             logger.error(f'no name_block on')
 
@@ -86,7 +101,7 @@ class Client:
         cena_name = cena_name.text
         cena_name = cena_name.replace('<strong>  ', '</strong>').strip()
 
-        karta_block = block.select_one('div.c-good-item-prices')
+        karta_block = block1.select_one('div.c-good-item-prices')
         if not karta_block:
             logger.error(f'no name_block on')
 
@@ -99,7 +114,7 @@ class Client:
 
         self.result.append(ParseResult(
             url=url,
-            cate_name='Сад и огород — Сетки садовые,укрывной материал — Сетки',
+            cate_name=name,
             brand_name=brand_name,
             cena_name=cena_name,
             karta_name=karta_name
@@ -117,6 +132,7 @@ class Client:
                 writer.writerow(item)
 
     def run(self):
+
         text = self.load_page()
         self.parse_page(text=text)
         logger.info(f'Получили{len(self.result)}элементов')
