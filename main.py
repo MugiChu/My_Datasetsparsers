@@ -124,7 +124,7 @@ class Client:
         logger.debug('-' * 100)
 
     def save_result(self):
-        path = '/media/mugichu/Transcend/pythonProject1/test.csv'
+        path = ''
         with open(path, 'w') as f:
             writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
             writer.writerow(HEADERS)
